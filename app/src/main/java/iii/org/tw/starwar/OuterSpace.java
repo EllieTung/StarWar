@@ -7,10 +7,14 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Rect;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+
+import java.util.ArrayList;
 
 /**
  * Created by YunHua on 9/28/16.
@@ -19,7 +23,7 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
     SurfaceHolder sHolder;
     Bitmap bmpControler,bmpBackground,bmpGhostr,bmpGhostl;
     private Canvas canvas=null;
-    int cX,cY,pX,pY,bgX,bgX2=-1280;
+    int cX,cY,bgX,bgX2=-1280;
     Rect srcRect,bgRect,bgRect2;
     int originTouchX,originTouchY,touchX,touchY;
     boolean cIsTouch=false;
@@ -27,28 +31,38 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
     private Thread osThread;
     private boolean flag=true;
     static int viewW,viewH;
-    private int turningNumber=1;
     private Pacman pacman;
     private Ghost ghost;
+    private SoundPool soundPool;
+    private int bomb,scream;
+    private ArrayList<Ghost> ghosts;
+    private boolean isWin=false;
 
 
     public OuterSpace(Context context) {
         super(context);
+//---------- for surfaceView
         getHolder().addCallback(this);
         sHolder=getHolder();
+//---------- for rolling background
         srcRect=new Rect(0,0,1280,720);
         bgRect=new Rect(bgX,0,1280,720);
         bgRect2=new Rect(bgX2,0,0,720);
+//----------
         viewW=getResources().getDisplayMetrics().widthPixels;
         viewH=getResources().getDisplayMetrics().heightPixels;
         pacman=new Pacman(context);
+//----------for sound
+        soundPool=new SoundPool(5, AudioManager.STREAM_MUSIC, 5);
+        bomb=soundPool.load(context,R.raw.bomb,1);
+        scream=soundPool.load(context,R.raw.scream,1);
 
         bmpControler= BitmapFactory.decodeResource(getResources(),R.drawable.controller);
         bmpBackground=BitmapFactory.decodeResource(getResources(),R.drawable.gamebackground);
         bmpGhostl=BitmapFactory.decodeResource(getResources(),R.drawable.ghost_l);
         bmpGhostr=BitmapFactory.decodeResource(getResources(),R.drawable.ghost_r);
 
-        ghost=new Ghost(bmpGhostl,bmpGhostr);
+        //ghost=new Ghost(bmpGhostl,bmpGhostr);
 
 
         pacman.pX=viewW/10;
@@ -56,12 +70,30 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
         cX=viewW/16;
         cY=6*viewH/9;
         osThread=new Thread(this);
+        osInit();
+    }
+    private void osInit(){
+        ghosts=new ArrayList<>();
+        for(int i=0;i<5;i++){
+            Ghost ghost=new Ghost(bmpGhostl,bmpGhostr);
+            ghosts.add(ghost);
+        }
     }
 
     public void DoDraw(){
-
-        bgX-=3;
-        bgX2-=3;
+        if(pacman.pX==viewW/16){
+            bgX+=0;
+            bgX2+=0;
+        }else if(pacman.pX<viewW/16){
+            bgX+=6;
+            bgX2+=6;
+        }else if(pacman.pX>15*viewW/16){
+            bgX -= 12;
+            bgX2 -= 12;
+        }else{
+            bgX-=6;
+            bgX2-=6;
+        }
         bgRect.set(bgX,0,1280+bgX,720);
         bgRect2.set(bgX2,0,1280+bgX2,720);
         canvas.drawBitmap(bmpBackground,srcRect,bgRect,null);
@@ -75,6 +107,13 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
 
         //canvas.drawColor(Color.BLACK);
         canvas.drawBitmap(bmpControler, cX, cY, null);
+    }
+
+    private boolean isWin(){
+        while(ghosts.size()<=0){
+            isWin=true;
+        }
+        return isWin;
     }
 
 
@@ -92,9 +131,11 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
                             tempX=originTouchX-cX;
                             tempY=originTouchY-cY;
                             cIsTouch=true;
-                        }
 
-            ghost.ghostTouch(originTouchX,originTouchY);
+                        }
+            for(Ghost g:ghosts) {
+                g.ghostTouch(originTouchX, originTouchY);
+            }
 
         } else if (event.getAction() == MotionEvent.ACTION_MOVE && cIsTouch) {
             touchX = (int) event.getX();
@@ -157,36 +198,50 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         osThread.start();
-
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-
-
+        osThread.interrupt();
     }
 
     @Override
     public void run() {
         while (flag) {
-            pacman.pacmanCollision((ghost.gX+ghost.gW/2),(ghost.gY+ghost.gH/2));
+            if (pacman.pacmanLife()) {
+                if (isWin) {
+                    canvas.drawColor(Color.RED);
+                } else {
+                    for (Ghost a : ghosts) {
+                        pacman.pacmanCollision((a.gX + a.gW / 2), (a.gY + a.gH / 2));
+                    }
 
-            try {
-                Thread.sleep(100);
-                canvas = sHolder.lockCanvas();
-                DoDraw();
-                pacman.drawPacman(canvas);
-                if(ghost.ghostLife()) {
-                    ghost.drawGhost(canvas);
-                }
+                    try {
+                        Thread.sleep(100);
+                        canvas = sHolder.lockCanvas();
+                        DoDraw();
+                        pacman.drawPacman(canvas);
+                        for (Ghost b : ghosts) {
+                            if (b.ghostLife()) {
+                                b.drawGhost(canvas);
+                            } else if (!b.ghostLife()) {
+                                soundPool.play(scream, 1, 1, 0, 0, 1);
+                                ghosts.remove(b);
+                                Log.d("Ellie", "Screm");
+                            }
+                            if (b.isHit) {
+                                soundPool.play(bomb, 1, 1, 0, 0, 1);
+                                Log.d("Ellie", "bomb");
+                            }
+                        }
 
-
-
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }finally {
-                if(canvas!=null){
-                    sHolder.unlockCanvasAndPost(canvas);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } finally {
+                        if (canvas != null) {
+                            sHolder.unlockCanvasAndPost(canvas);
+                        }
+                    }
                 }
             }
         }

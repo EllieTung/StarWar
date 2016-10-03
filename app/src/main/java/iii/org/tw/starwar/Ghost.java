@@ -3,6 +3,8 @@ package iii.org.tw.starwar;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Rect;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.util.Log;
 
 /**
@@ -17,13 +19,16 @@ public class Ghost implements Runnable {
     public int gW,gH;
     private Bitmap bmpGhostl=null,bmpGhostr=null;
     Rect gRect=new Rect();
-    private int hitGhost=5;
+    private int hitGhost=3;
+    public boolean isHit;
 
     public Ghost(Bitmap bmpGhostl,Bitmap bmpGhostr) {
         this.bmpGhostl=bmpGhostl;
         this.bmpGhostr=bmpGhostr;
         ghostInit();
         new Thread(this).start();
+
+
     }
     private void ghostInit(){
         gW=bmpGhostl.getWidth();
@@ -85,13 +90,17 @@ public class Ghost implements Runnable {
         gRect.set(gX, gY, gX + gW, gY + gH) ;
         gStep--;
     }
-    protected void ghostTouch(int touchX,int touchY ){
+    protected boolean ghostTouch(int touchX,int touchY ){
         if(gRect.contains(touchX,touchY)){
             hitGhost--;
+            isHit=true;
             if(hitGhost<=0) {
                 flag = false;
             }
+        }else{
+            isHit=false;
         }
+        return isHit;
     }
 
     protected boolean ghostLife(){
