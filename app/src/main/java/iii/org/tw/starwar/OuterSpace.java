@@ -15,6 +15,8 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Created by YunHua on 9/28/16.
@@ -35,7 +37,7 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
     private Ghost ghost;
     private SoundPool soundPool;
     private int bomb,scream;
-    private ArrayList<Ghost> ghosts;
+    private CopyOnWriteArrayList<Ghost> ghosts;
     private boolean isWin=false;
 
 
@@ -73,7 +75,7 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
         osInit();
     }
     private void osInit(){
-        ghosts=new ArrayList<>();
+        ghosts=new CopyOnWriteArrayList<>();
         for(int i=0;i<5;i++){
             Ghost ghost=new Ghost(bmpGhostl,bmpGhostr);
             ghosts.add(ghost);
@@ -109,14 +111,6 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
         canvas.drawBitmap(bmpControler, cX, cY, null);
     }
 
-    private boolean isWin(){
-        while(ghosts.size()<=0){
-            isWin=true;
-        }
-        return isWin;
-    }
-
-
     @Override
     public boolean onTouchEvent(MotionEvent event) {
 
@@ -135,6 +129,9 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
                         }
             for(Ghost g:ghosts) {
                 g.ghostTouch(originTouchX, originTouchY);
+                if(g.ghostTouch(originTouchX, originTouchY)){
+                    Log.d("Ellie","bomb");
+                }
             }
 
         } else if (event.getAction() == MotionEvent.ACTION_MOVE && cIsTouch) {
@@ -192,9 +189,7 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
     }
-
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         osThread.start();
@@ -208,10 +203,9 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
     @Override
     public void run() {
         while (flag) {
-            if (pacman.pacmanLife()) {
-                if (isWin) {
-                    canvas.drawColor(Color.RED);
-                } else {
+            if (pacman.pacmanLife() && isWin) {
+                   Log.d("Ellie","win");
+                } else if(!isWin){
                     for (Ghost a : ghosts) {
                         pacman.pacmanCollision((a.gX + a.gW / 2), (a.gY + a.gH / 2));
                     }
@@ -224,14 +218,13 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
                         for (Ghost b : ghosts) {
                             if (b.ghostLife()) {
                                 b.drawGhost(canvas);
-                            } else if (!b.ghostLife()) {
-                                soundPool.play(scream, 1, 1, 0, 0, 1);
-                                ghosts.remove(b);
-                                Log.d("Ellie", "Screm");
                             }
-                            if (b.isHit) {
-                                soundPool.play(bomb, 1, 1, 0, 0, 1);
-                                Log.d("Ellie", "bomb");
+                        }
+                        for (Ghost c : ghosts) {
+                            if (!c.ghostLife()) {
+                                // soundPool.play(scream, 1, 1, 0, 0, 1);
+                                ghosts.remove(c);
+                                Log.d("Ellie", "Screm");
                             }
                         }
 
@@ -240,9 +233,18 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
                     } finally {
                         if (canvas != null) {
                             sHolder.unlockCanvasAndPost(canvas);
+                            Log.d("Ellie",""+ghosts.size());
+
+                            if(ghosts.size()==0){
+                                isWin=true;
+                                flag=false;
+
+                            }
                         }
                     }
-                }
+            }else{
+                Log.d("Ellie","pacman die");
+                flag=false;
             }
         }
 
