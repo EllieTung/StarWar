@@ -35,6 +35,7 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
     static int viewW,viewH;
     private Pacman pacman;
     private Ghost ghost;
+    private int ghostAmount;
     private SoundPool soundPool;
     private int bomb,scream;
     private CopyOnWriteArrayList<Ghost> ghosts;
@@ -65,6 +66,7 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
         bmpGhostr=BitmapFactory.decodeResource(getResources(),R.drawable.ghost_r);
 
         //ghost=new Ghost(bmpGhostl,bmpGhostr);
+        ghostAmount=5;
 
 
         pacman.pX=viewW/10;
@@ -76,7 +78,7 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
     }
     private void osInit(){
         ghosts=new CopyOnWriteArrayList<>();
-        for(int i=0;i<5;i++){
+        for(int i=0;i<ghostAmount;i++){
             Ghost ghost=new Ghost(bmpGhostl,bmpGhostr);
             ghosts.add(ghost);
         }
@@ -130,6 +132,7 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
             for(Ghost g:ghosts) {
                 g.ghostTouch(originTouchX, originTouchY);
                 if(g.ghostTouch(originTouchX, originTouchY)){
+                    soundPool.play(bomb, 1, 1, 0, 0, 1);
                     Log.d("Ellie","bomb");
                 }
             }
@@ -222,7 +225,7 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
                         }
                         for (Ghost c : ghosts) {
                             if (!c.ghostLife()) {
-                                // soundPool.play(scream, 1, 1, 0, 0, 1);
+                                soundPool.play(scream, 1, 1, 0, 0, 1);
                                 ghosts.remove(c);
                                 Log.d("Ellie", "Screm");
                             }
