@@ -112,6 +112,9 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
         //canvas.drawColor(Color.BLACK);
         canvas.drawBitmap(bmpControler, cX, cY, null);
     }
+    private void doEndDraw(){
+
+    }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -235,21 +238,27 @@ public class OuterSpace extends SurfaceView implements SurfaceHolder.Callback,Ru
                         e.printStackTrace();
                     } finally {
                         if (canvas != null) {
-                            sHolder.unlockCanvasAndPost(canvas);
+
                             Log.d("Ellie",""+ghosts.size());
 
                             if(ghosts.size()==0){
                                 isWin=true;
                                 flag=false;
+                                Log.d("Ellie","pacman die1");
+                                try {
+                                    Thread.sleep(3000);
+                                    canvas.drawColor(Color.BLACK);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
 
                             }
+                            sHolder.unlockCanvasAndPost(canvas);
                         }
                     }
-            }else{
-                Log.d("Ellie","pacman die");
-                flag=false;
             }
         }
+
 
     }
 }
